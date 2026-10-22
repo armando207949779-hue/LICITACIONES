@@ -1,123 +1,118 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
 
-def run():
-    st.title("📊 Módulo 01: Ingesta y Análisis Exploratorio")
-    st.markdown("Carga de conjuntos de datos, validación estructural y previsualización de variables operacionales.")
-    
-    # ---------------------------------------------------------
-    # 1. ESTADO GLOBAL (st.session_state)
-    # ---------------------------------------------------------
-    if "df_datos" not in st.session_state:
-        st.session_state.df_datos = None
+st.title("🌐 Módulo 01: Accesos Rápidos y Recursos de Licitaciones")
+st.markdown(
+    "Directorio centralizado de plataformas oficiales, herramientas de datos abiertos "
+    "y accesos directos del sistema de compras públicas de Chile."
+)
 
-    if "datos_validados" not in st.session_state:
-        st.session_state.datos_validados = False
+st.divider()
 
-    # ---------------------------------------------------------
-    # 2. SECCIÓN DE CARGA DE ARCHIVO
-    # ---------------------------------------------------------
-    st.subheader("1. Origen de Datos")
-    
-    col_upload, col_demo = st.columns([3, 1])
-    
-    with col_upload:
-        archivo_cargado = st.file_uploader(
-            "Cargar archivo CSV o Excel", 
-            type=["csv", "xlsx"],
-            help="Selecciona un archivo con variables numéricas y/o series temporales."
-        )
+# -----------------------------------------------------------------------------
+# 1. BUSCADOR RÁPIDO DE LICITACIÓN POR CÓDIGO
+# -----------------------------------------------------------------------------
+st.subheader("🔍 Acceso Directo por Código de Licitación")
+col_input, col_btn = st.columns([3, 1])
 
-    with col_demo:
-        st.write("¿Sin datos a mano?")
-        usar_demo = st.button("Cargar Datos de Prueba", use_container_width=True)
+with col_input:
+    id_licitacion = st.text_input(
+        "Ingrese ID de Licitación:",
+        placeholder="Ej: 1234-56-LR26 o 2408-12-L126",
+        help="Introduce el código identificador de la licitación para abrir la búsqueda directamente."
+    )
 
-    # Procesar archivo cargado o generar dataset sintético
-    if archivo_cargado is not None:
-        try:
-            if archivo_cargado.name.endswith(".csv"):
-                df = pd.read_csv(archivo_cargado)
-            else:
-                df = pd.read_excel(archivo_cargado)
-            
-            st.session_state.df_datos = df
-            st.session_state.datos_validados = True
-            st.success(f"Archivo `{archivo_cargado.name}` cargado correctamente.")
-        except Exception as e:
-            st.error(f"Error al leer el archivo: {e}")
-            
-    elif usar_demo:
-        # Generación de datos sintéticos de prueba
-        np.random.seed(42)
-        fechas = pd.date_range(start="2026-01-01", periods=100, freq="h")
-        df_demo = pd.DataFrame({
-            "Timestamp": fechas,
-            "Flujo_Alimentacion": np.random.normal(loc=1200, scale=80, size=100).round(2),
-            "Potencia": np.random.normal(loc=4500, scale=150, size=100).round(2),
-            "Presion": np.random.normal(loc=75, scale=5, size=100).round(2),
-            "Estado": np.random.choice(["Normal", "Alerta", "Estable"], size=100)
-        })
-        st.session_state.df_datos = df_demo
-        st.session_state.datos_validados = True
-        st.info("Datos de prueba cargados en memoria.")
-
-    # ---------------------------------------------------------
-    # 3. VISUALIZACIÓN Y ANÁLISIS SI EXISTEN DATOS
-    # ---------------------------------------------------------
-    if st.session_state.df_datos is not None:
-        df = st.session_state.df_datos
-
-        st.divider()
-        st.subheader("2. Resumen General del Dataset")
-        
-        # Métricas principales en columnas
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Registros", f"{len(df):,}")
-        m2.metric("Columnas", f"{df.shape[1]}")
-        m3.metric("Valores Nulos", f"{df.isna().sum().sum()}")
-        m4.metric("Memoria en RAM", f"{df.memory_usage().sum() / 1024:.1f} KB")
-
-        # Filtros de visualización
-        st.markdown("#### Vista Previa de Datos")
-        num_filas = st.slider("Filas a mostrar:", min_value=5, max_value=min(100, len(df)), value=10)
-        st.dataframe(df.head(num_filas), use_container_width=True)
-
-        # ---------------------------------------------------------
-        # 4. GRÁFICOS Y VARIABLES
-        # ---------------------------------------------------------
-        st.divider()
-        st.subheader("3. Exploración de Variables Numéricas")
-
-        columnas_numericas = df.select_dtypes(include=[np.number]).columns.tolist()
-
-        if len(columnas_numericas) > 0:
-            col_sel1, col_sel2 = st.columns(2)
-            
-            with col_sel1:
-                var_analizar = st.selectbox("Seleccione variable para tendencia:", columnas_numericas)
-            
-            with col_sel2:
-                tipo_grafico = st.radio("Tipo de vista:", ["Línea de tendencia", "Histograma / Distribución"], horizontal=True)
-
-            if tipo_grafico == "Línea de tendencia":
-                st.line_chart(df[var_analizar])
-            else:
-                conteo, bins = np.histogram(df[var_analizar].dropna(), bins=20)
-                df_hist = pd.DataFrame({"Intervalo": bins[:-1].round(1), "Frecuencia": conteo}).set_index("Intervalo")
-                st.bar_chart(df_hist)
-
-            # Estadísticos descriptivos
-            with st.expander("Ver Estadísticos Descriptivos"):
-                st.write(df.describe())
-        else:
-            st.warning("No se detectaron columnas numéricas en el dataset cargado.")
-
-        # Indicador de paso al siguiente módulo
-        st.success("✅ Datos preparados en `st.session_state`. Puedes ir al Módulo 02 para continuar el procesamiento.")
+with col_btn:
+    st.write("")  # Espaciador vertical
+    st.write("")
+    if id_licitacion.strip():
+        url_busqueda = f"https://www.mercadopublico.cl/Home/BuscarLicitacion?searchTerm={id_licitacion.strip()}"
+        st.link_button("Buscar en Mercado Público ↗", url_busqueda, use_container_width=True)
     else:
-        st.info("👈 Sube un archivo o presiona 'Cargar Datos de Prueba' para habilitar el análisis.")
+        st.button("Buscar en Mercado Público ↗", disabled=True, use_container_width=True)
 
-# Ejecución automática al ser llamado por st.navigation (00_app.py) o ejecución directa
-if __name__ == "__main__" or True:
-    run()
+st.divider()
+
+# -----------------------------------------------------------------------------
+# 2. PORTALES OPERATIVOS Y TRANSACCIONALES
+# -----------------------------------------------------------------------------
+st.subheader("🏢 Plataformas Principales de Operación")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    with st.container(border=True):
+        st.markdown("#### Mercado Público")
+        st.caption("Plataforma transaccional para postular a licitaciones, compras ágiles y convenios marco.")
+        st.link_button("Ir a Mercado Público", "https://www.mercadopublico.cl", use_container_width=True)
+
+with col2:
+    with st.container(border=True):
+        st.markdown("#### ChileCompra")
+        st.caption("Dirección de Compras Públicas: noticias, directivas de contratación, capacitaciones y soporte.")
+        st.link_button("Ir a ChileCompra", "https://www.chilecompra.cl", use_container_width=True)
+
+with col3:
+    with st.container(border=True):
+        st.markdown("#### ChileProveedores")
+        st.caption("Registro Oficial de Proveedores del Estado: estados de habilidad, acreditaciones y certificados.")
+        st.link_button("Ir a ChileProveedores", "https://www.chileproveedores.cl", use_container_width=True)
+
+# -----------------------------------------------------------------------------
+# 3. DATOS ABIERTOS, INTELIGENCIA Y API
+# -----------------------------------------------------------------------------
+st.subheader("📊 Datos Abiertos y Desarrollo")
+
+col4, col5, col6 = st.columns(3)
+
+with col4:
+    with st.container(border=True):
+        st.markdown("#### Portal Datos Abiertos")
+        st.caption("Estadísticas del gasto fiscal, trazabilidad y comportamiento de compras públicas.")
+        st.link_button("Portal Datos Abiertos", "https://datos-abiertos.chilecompra.cl", use_container_width=True)
+
+with col5:
+    with st.container(border=True):
+        st.markdown("#### Descargas Masivas (.7z / CSV)")
+        st.caption("Bases de datos consolidadas de órdenes de compra, ofertas y licitaciones históricas.")
+        st.link_button("Centro de Descargas", "https://datos-abiertos.chilecompra.cl/descargas", use_container_width=True)
+
+with col6:
+    with st.container(border=True):
+        st.markdown("#### API Mercado Público")
+        st.caption("Servicios web (JSON/XML) para extraer licitaciones y órdenes de compra en tiempo real.")
+        st.link_button("Documentación y Tickets API", "https://api.mercadopublico.cl", use_container_width=True)
+
+# -----------------------------------------------------------------------------
+# 4. MARCO REGULATORIO Y FISCALIZACIÓN
+# -----------------------------------------------------------------------------
+st.subheader("⚖️ Marco Normativo y Reclamaciones")
+
+col7, col8 = st.columns(2)
+
+with col7:
+    with st.container(border=True):
+        st.markdown("#### Tribunal de Contratación Pública (TCP)")
+        st.caption("Órgano jurisdiccional para interponer acciones de impugnación contra actos u omisiones ilegales en licitaciones.")
+        st.link_button("Tribunal de Contratación Pública", "https://www.tribunaldecontratacionpublica.cl", use_container_width=True)
+
+with col8:
+    with st.container(border=True):
+        st.markdown("#### Contraloría General de la República")
+        st.caption("Jurisprudencia administrativa, dictámenes sobre contratación pública y fiscalización estatal.")
+        st.link_button("Portal Contraloría (CGR)", "https://www.contraloria.cl", use_container_width=True)
+
+# -----------------------------------------------------------------------------
+# 5. GUÍA RÁPIDA DE TIPOS DE LICITACIÓN (REFERENCIA)
+# -----------------------------------------------------------------------------
+with st.expander("📌 Glosario de Tipos de Compra y Códigos"):
+    st.markdown("""
+    | Tipo | Nomenclatura | Descripción / Rango de Monto |
+    | :--- | :--- | :--- |
+    | **L1** | Licitación Pública | Menor a 100 UTM |
+    | **LE** | Licitación Pública | Entre 100 y 1.000 UTM |
+    | **LP** | Licitación Pública | Mayor a 1.000 UTM |
+    | **LS** | Licitación Pública | Servicios personales especializados |
+    | **CO** | Compra Ágil | Compras menores a 30 UTM con cotizaciones directas |
+    | **CM** | Convenio Marco | Catálogo electrónico para adquisiciones estandarizadas |
+    """)
+    
